@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "rack/session/abstract/id"
-require_relative "exceptions"
+require "action_controller/metal/exceptions"
 require "active_support/security_utils"
 
 module ActionController #:nodoc:
@@ -248,6 +248,7 @@ module ActionController #:nodoc:
         "If you know what you're doing, go ahead and disable forgery " \
         "protection on this action to permit cross-origin JavaScript embedding."
       private_constant :CROSS_ORIGIN_JAVASCRIPT_WARNING
+      # :startdoc:
 
       # If `verify_authenticity_token` was run (indicating that we have
       # forgery protection enabled for this request) then also verify that

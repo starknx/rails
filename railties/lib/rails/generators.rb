@@ -4,7 +4,7 @@ activesupport_path = File.expand_path("../../../activesupport/lib", __dir__)
 $:.unshift(activesupport_path) if File.directory?(activesupport_path) && !$:.include?(activesupport_path)
 
 require "thor/group"
-require_relative "command"
+require "rails/command"
 
 require "active_support"
 require "active_support/core_ext/object/blank"
@@ -218,6 +218,7 @@ module Rails
         rails.delete("app")
         rails.delete("plugin")
         rails.delete("encrypted_secrets")
+        rails.delete("credentials")
 
         hidden_namespaces.each { |n| groups.delete(n.to_s) }
 

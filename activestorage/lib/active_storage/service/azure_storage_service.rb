@@ -28,7 +28,7 @@ module ActiveStorage
       end
     end
 
-    def download(key)
+    def download(key, &block)
       if block_given?
         instrument :streaming_download, key do
           stream(key, &block)
@@ -66,7 +66,7 @@ module ActiveStorage
           URI(base_url), false,
           permissions: "r",
           expiry: format_expiry(expires_in),
-          content_disposition: disposition,
+          content_disposition: content_disposition_with(type: disposition, filename: filename),
           content_type: content_type
         ).to_s
 
@@ -108,15 +108,15 @@ module ActiveStorage
       end
 
       # Reads the object for the given key in chunks, yielding each to the block.
-      def stream(key, options = {}, &block)
+      def stream(key)
         blob = blob_for(key)
 
         chunk_size = 5.megabytes
         offset = 0
 
         while offset < blob.properties[:content_length]
-          _, io = blobs.get_blob(container, key, start_range: offset, end_range: offset + chunk_size - 1)
-          yield io
+          _, chunk = blobs.get_blob(container, key, start_range: offset, end_range: offset + chunk_size - 1)
+          yield chunk.force_encoding(Encoding::BINARY)
           offset += chunk_size
         end
       end

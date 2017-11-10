@@ -18,7 +18,7 @@ module ActiveStorage
     #
     #   person.avatar.attach(params[:avatar]) # ActionDispatch::Http::UploadedFile object
     #   person.avatar.attach(params[:signed_blob_id]) # Signed reference to blob from direct upload
-    #   person.avatar.attach(io: File.open("~/face.jpg"), filename: "face.jpg", content_type: "image/jpg")
+    #   person.avatar.attach(io: File.open("/path/to/face.jpg"), filename: "face.jpg", content_type: "image/jpg")
     #   person.avatar.attach(avatar_blob) # ActiveStorage::Blob object
     def attach(attachable)
       if attached? && dependent == :purge_later
@@ -59,10 +59,14 @@ module ActiveStorage
       def replace(attachable)
         blob.tap do
           transaction do
-            destroy
+            destroy_attachment
             write_attachment create_attachment_from(attachable)
           end
         end.purge_later
+      end
+
+      def destroy_attachment
+        attachment.destroy
       end
 
       def create_attachment_from(attachable)

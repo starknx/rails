@@ -162,6 +162,7 @@ Here is a noncomprehensive list of documentation:
 
 - [Sidekiq](https://github.com/mperham/sidekiq/wiki/Active-Job)
 - [Resque](https://github.com/resque/resque/wiki/ActiveJob)
+- [Sneakers](https://github.com/jondot/sneakers/wiki/How-To:-Rails-Background-Jobs-with-ActiveJob)
 - [Sucker Punch](https://github.com/brandonhilkert/sucker_punch#active-job)
 - [Queue Classic](https://github.com/QueueClassic/queue_classic#active-job)
 
@@ -387,6 +388,25 @@ class GuestsCleanupJob < ApplicationJob
   end
 end
 ```
+
+### Retrying or Discarding failed jobs
+
+It's also possible to retry or discard a job if an exception is raised during execution.
+For example:
+
+```ruby
+class RemoteServiceJob < ApplicationJob
+  retry_on CustomAppException # defaults to 3s wait, 5 attempts
+
+  discard_on ActiveJob::DeserializationError
+
+  def perform(*args)
+    # Might raise CustomAppException or ActiveJob::DeserializationError
+  end
+end
+```
+
+To get more details see the API Documentation for [ActiveJob::Exceptions](http://api.rubyonrails.org/classes/ActiveJob/Exceptions/ClassMethods.html).
 
 ### Deserialization
 

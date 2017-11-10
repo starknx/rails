@@ -31,8 +31,24 @@ module ActionDispatch
           end
         end
 
+        def browser_options
+          if @browser == :headless_chrome
+            browser_options = Selenium::WebDriver::Chrome::Options.new
+            browser_options.args << "--headless"
+            browser_options.args << "--disable-gpu"
+
+            @options.merge(options: browser_options)
+          else
+            @options
+          end
+        end
+
+        def browser
+          @browser == :headless_chrome ? :chrome : @browser
+        end
+
         def register_selenium(app)
-          Capybara::Selenium::Driver.new(app, { browser: @browser }.merge(@options)).tap do |driver|
+          Capybara::Selenium::Driver.new(app, { browser: browser }.merge(browser_options)).tap do |driver|
             driver.browser.manage.window.size = Selenium::WebDriver::Dimension.new(*@screen_size)
           end
         end
@@ -43,7 +59,7 @@ module ActionDispatch
 
         def register_webkit(app)
           Capybara::Webkit::Driver.new(app, Capybara::Webkit::Configuration.to_hash.merge(@options)).tap do |driver|
-            driver.resize_window(*@screen_size)
+            driver.resize_window_to(driver.current_window_handle, *@screen_size)
           end
         end
 

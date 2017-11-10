@@ -53,7 +53,6 @@ module Rails
 
         def ensure_master_key_has_been_added
           master_key_generator.add_master_key_file
-          master_key_generator.ignore_master_key_file
         end
 
         def ensure_credentials_have_been_added
@@ -68,15 +67,15 @@ module Rails
 
 
         def master_key_generator
-          require_relative "../../generators"
-          require_relative "../../generators/rails/master_key/master_key_generator"
+          require "rails/generators"
+          require "rails/generators/rails/master_key/master_key_generator"
 
           Rails::Generators::MasterKeyGenerator.new
         end
 
         def credentials_generator
-          require_relative "../../generators"
-          require_relative "../../generators/rails/credentials/credentials_generator"
+          require "rails/generators"
+          require "rails/generators/rails/credentials/credentials_generator"
 
           Rails::Generators::CredentialsGenerator.new
         end

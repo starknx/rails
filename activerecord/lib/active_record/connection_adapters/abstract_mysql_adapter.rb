@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require_relative "abstract_adapter"
-require_relative "statement_pool"
-require_relative "mysql/column"
-require_relative "mysql/explain_pretty_printer"
-require_relative "mysql/quoting"
-require_relative "mysql/schema_creation"
-require_relative "mysql/schema_definitions"
-require_relative "mysql/schema_dumper"
-require_relative "mysql/schema_statements"
-require_relative "mysql/type_metadata"
+require "active_record/connection_adapters/abstract_adapter"
+require "active_record/connection_adapters/statement_pool"
+require "active_record/connection_adapters/mysql/column"
+require "active_record/connection_adapters/mysql/explain_pretty_printer"
+require "active_record/connection_adapters/mysql/quoting"
+require "active_record/connection_adapters/mysql/schema_creation"
+require "active_record/connection_adapters/mysql/schema_definitions"
+require "active_record/connection_adapters/mysql/schema_dumper"
+require "active_record/connection_adapters/mysql/schema_statements"
+require "active_record/connection_adapters/mysql/type_metadata"
 
 require "active_support/core_ext/string/strip"
 
@@ -284,7 +284,7 @@ module ActiveRecord
       def table_comment(table_name) # :nodoc:
         scope = quoted_scope(table_name)
 
-        query_value(<<-SQL.strip_heredoc, "SCHEMA")
+        query_value(<<-SQL.strip_heredoc, "SCHEMA").presence
           SELECT table_comment
           FROM information_schema.tables
           WHERE table_schema = #{scope[:schema]}
@@ -309,6 +309,11 @@ module ActiveRecord
         end.join(", ")
 
         execute("ALTER TABLE #{quote_table_name(table_name)} #{sqls}")
+      end
+
+      def change_table_comment(table_name, comment) #:nodoc:
+        comment = "" if comment.nil?
+        execute("ALTER TABLE #{quote_table_name(table_name)} COMMENT #{quote(comment)}")
       end
 
       # Renames a table.
@@ -351,18 +356,19 @@ module ActiveRecord
 
       def change_column_default(table_name, column_name, default_or_changes) #:nodoc:
         default = extract_new_default_value(default_or_changes)
-        column = column_for(table_name, column_name)
-        change_column table_name, column_name, column.sql_type, default: default
+        change_column table_name, column_name, nil, default: default
       end
 
       def change_column_null(table_name, column_name, null, default = nil) #:nodoc:
-        column = column_for(table_name, column_name)
-
         unless null || default.nil?
           execute("UPDATE #{quote_table_name(table_name)} SET #{quote_column_name(column_name)}=#{quote(default)} WHERE #{quote_column_name(column_name)} IS NULL")
         end
 
-        change_column table_name, column_name, column.sql_type, null: null
+        change_column table_name, column_name, nil, null: null
+      end
+
+      def change_column_comment(table_name, column_name, comment) #:nodoc:
+        change_column table_name, column_name, nil, comment: comment
       end
 
       def change_column(table_name, column_name, type, options = {}) #:nodoc:
@@ -557,7 +563,6 @@ module ActiveRecord
           m.register_type %r(longblob)i,   Type::Binary.new(limit: 2**32 - 1)
           m.register_type %r(^float)i,     Type::Float.new(limit: 24)
           m.register_type %r(^double)i,    Type::Float.new(limit: 53)
-          m.register_type %r(^json)i,      Type::Json.new
 
           register_integer_type m, %r(^bigint)i,    limit: 8
           register_integer_type m, %r(^int)i,       limit: 4
@@ -668,6 +673,7 @@ module ActiveRecord
 
         def change_column_sql(table_name, column_name, type, options = {})
           column = column_for(table_name, column_name)
+          type ||= column.sql_type
 
           unless options.key?(:default)
             options[:default] = column.default
@@ -716,7 +722,7 @@ module ActiveRecord
 
         def remove_index_sql(table_name, options = {})
           index_name = index_name_for_remove(table_name, options)
-          "DROP INDEX #{index_name}"
+          "DROP INDEX #{quote_column_name(index_name)}"
         end
 
         def add_timestamps_sql(table_name, options = {})

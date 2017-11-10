@@ -71,23 +71,25 @@ If we want to display the properties of all the books in our view, we can do so 
 <h1>Listing Books</h1>
 
 <table>
-  <tr>
-    <th>Title</th>
-    <th>Summary</th>
-    <th></th>
-    <th></th>
-    <th></th>
-  </tr>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Content</th>
+      <th colspan="3"></th>
+    </tr>
+  </thead>
 
-<% @books.each do |book| %>
-  <tr>
-    <td><%= book.title %></td>
-    <td><%= book.content %></td>
-    <td><%= link_to "Show", book %></td>
-    <td><%= link_to "Edit", edit_book_path(book) %></td>
-    <td><%= link_to "Remove", book, method: :delete, data: { confirm: "Are you sure?" } %></td>
-  </tr>
-<% end %>
+  <tbody>
+    <% @books.each do |book| %>
+      <tr>
+        <td><%= book.title %></td>
+        <td><%= book.content %></td>
+        <td><%= link_to "Show", book %></td>
+        <td><%= link_to "Edit", edit_book_path(book) %></td>
+        <td><%= link_to "Destroy", book, method: :delete, data: { confirm: "Are you sure?" } %></td>
+      </tr>
+    <% end %>
+  </tbody>
 </table>
 
 <br>
@@ -230,14 +232,14 @@ You can send an HTML string back to the browser by using the `:html` option to
 `render`:
 
 ```ruby
-render html: "<strong>Not Found</strong>".html_safe
+render html: helpers.tag.strong('Not Found')
 ```
 
 TIP: This is useful when you're rendering a small snippet of HTML code.
 However, you might want to consider moving it to a template file if the markup
 is complex.
 
-NOTE: When using `html:` option, HTML entities will be escaped if the string is not marked as HTML safe by using `html_safe` method.
+NOTE: When using `html:` option, HTML entities will be escaped if the string is not composed with `html_safe`-aware APIs.
 
 #### Rendering JSON
 

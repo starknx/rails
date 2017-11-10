@@ -12,8 +12,11 @@ module ActiveRecord
           timestamp = collection.max_by(&timestamp_column)._read_attribute(timestamp_column)
         end
       else
+        if collection.eager_loading?
+          collection = collection.send(:apply_join_dependency)
+        end
         column_type = type_for_attribute(timestamp_column.to_s)
-        column = "#{connection.quote_table_name(collection.table_name)}.#{connection.quote_column_name(timestamp_column)}"
+        column = connection.column_name_from_arel_node(collection.arel_attribute(timestamp_column))
         select_values = "COUNT(*) AS #{connection.quote_column_name("size")}, MAX(%s) AS timestamp"
 
         if collection.has_limit_or_offset?

@@ -70,10 +70,10 @@ class PersistenceTest < ActiveRecord::TestCase
   end
 
   def test_update_many
-    topic_data = { 1 => { "content" => "1 updated" }, 2 => { "content" => "2 updated" } }
+    topic_data = { 1 => { "content" => "1 updated" }, 2 => { "content" => "2 updated" }, nil => {} }
     updated = Topic.update(topic_data.keys, topic_data.values)
 
-    assert_equal 2, updated.size
+    assert_equal [1, 2], updated.map(&:id)
     assert_equal "1 updated", Topic.find(1).content
     assert_equal "2 updated", Topic.find(2).content
   end
@@ -81,9 +81,8 @@ class PersistenceTest < ActiveRecord::TestCase
   def test_class_level_update_is_affected_by_scoping
     topic_data = { 1 => { "content" => "1 updated" }, 2 => { "content" => "2 updated" } }
 
-    assert_raise(ActiveRecord::RecordNotFound) do
-      Topic.where("1=0").scoping { Topic.update(topic_data.keys, topic_data.values) }
-    end
+    assert_equal [], Topic.where("1=0").scoping { Topic.update(topic_data.keys, topic_data.values) }
+
     assert_not_equal "1 updated", Topic.find(1).content
     assert_not_equal "2 updated", Topic.find(2).content
   end
@@ -95,27 +94,31 @@ class PersistenceTest < ActiveRecord::TestCase
   end
 
   def test_delete_all_with_joins_and_where_part_is_hash
-    where_args = { toys: { name: "Bone" } }
-    count = Pet.joins(:toys).where(where_args).count
+    pets = Pet.joins(:toys).where(toys: { name: "Bone" })
 
-    assert_equal count, 1
-    assert_equal count, Pet.joins(:toys).where(where_args).delete_all
-  end
-
-  def test_delete_all_with_left_joins
-    where_args = { toys: { name: "Bone" } }
-    count = Pet.left_joins(:toys).where(where_args).count
-
-    assert_equal count, 1
-    assert_equal count, Pet.left_joins(:toys).where(where_args).delete_all
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.delete_all
   end
 
   def test_delete_all_with_joins_and_where_part_is_not_hash
-    where_args = ["toys.name = ?", "Bone"]
-    count = Pet.joins(:toys).where(where_args).count
+    pets = Pet.joins(:toys).where("toys.name = ?", "Bone")
 
-    assert_equal count, 1
-    assert_equal count, Pet.joins(:toys).where(where_args).delete_all
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.delete_all
+  end
+
+  def test_delete_all_with_left_joins
+    pets = Pet.left_joins(:toys).where(toys: { name: "Bone" })
+
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.delete_all
+  end
+
+  def test_delete_all_with_includes
+    pets = Pet.includes(:toys).where(toys: { name: "Bone" })
+
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.delete_all
   end
 
   def test_increment_attribute
@@ -175,7 +178,7 @@ class PersistenceTest < ActiveRecord::TestCase
     clients = Client.all.merge!(order: "id").find([2, 3])
 
     assert_difference("Client.count", -2) do
-      destroyed = Client.destroy([2, 3]).sort_by(&:id)
+      destroyed = Client.destroy([2, 3, nil]).sort_by(&:id)
       assert_equal clients, destroyed
       assert destroyed.all?(&:frozen?), "destroyed clients should be frozen"
     end
@@ -497,17 +500,24 @@ class PersistenceTest < ActiveRecord::TestCase
   end
 
   def test_update_all_with_joins
-    where_args = { toys: { name: "Bone" } }
-    count = Pet.left_joins(:toys).where(where_args).count
+    pets = Pet.joins(:toys).where(toys: { name: "Bone" })
 
-    assert_equal count, Pet.joins(:toys).where(where_args).update_all(name: "Bob")
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.update_all(name: "Bob")
   end
 
   def test_update_all_with_left_joins
-    where_args = { toys: { name: "Bone" } }
-    count = Pet.left_joins(:toys).where(where_args).count
+    pets = Pet.left_joins(:toys).where(toys: { name: "Bone" })
 
-    assert_equal count, Pet.left_joins(:toys).where(where_args).update_all(name: "Bob")
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.update_all(name: "Bob")
+  end
+
+  def test_update_all_with_includes
+    pets = Pet.includes(:toys).where(toys: { name: "Bone" })
+
+    assert_equal true, pets.exists?
+    assert_equal pets.count, pets.update_all(name: "Bob")
   end
 
   def test_update_all_with_non_standard_table_name
@@ -917,7 +927,9 @@ class PersistenceTest < ActiveRecord::TestCase
     should_be_destroyed_reply = Reply.create("title" => "hello", "content" => "world")
     Topic.find(1).replies << should_be_destroyed_reply
 
-    Topic.destroy(1)
+    topic = Topic.destroy(1)
+    assert topic.destroyed?
+
     assert_raise(ActiveRecord::RecordNotFound) { Topic.find(1) }
     assert_raise(ActiveRecord::RecordNotFound) { Reply.find(should_be_destroyed_reply.id) }
   end
@@ -926,9 +938,8 @@ class PersistenceTest < ActiveRecord::TestCase
     should_not_be_destroyed_reply = Reply.create("title" => "hello", "content" => "world")
     Topic.find(1).replies << should_not_be_destroyed_reply
 
-    assert_raise(ActiveRecord::RecordNotFound) do
-      Topic.where("1=0").scoping { Topic.destroy(1) }
-    end
+    assert_nil Topic.where("1=0").scoping { Topic.destroy(1) }
+
     assert_nothing_raised { Topic.find(1) }
     assert_nothing_raised { Reply.find(should_not_be_destroyed_reply.id) }
   end

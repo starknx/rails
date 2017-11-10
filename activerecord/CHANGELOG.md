@@ -1,3 +1,149 @@
+*   Fix `bin/rails db:migrate` with specified `VERSION`.
+    `bin/rails db:migrate` with empty VERSION behaves as without `VERSION`.
+    Check a format of `VERSION`: Allow a migration version number
+    or name of a migration file. Raise error if format of `VERSION` is invalid.
+    Raise error if target migration doesn't exist.
+
+    *bogdanvlviv*
+
+*   Fixed a bug where column orders for an index weren't written to
+    db/schema.rb when using the sqlite adapter.
+
+    Fixes #30902.
+
+    *Paul Kuruvilla*
+
+*   Remove deprecated method `#sanitize_conditions`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated method `#scope_chain`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated configuration `.error_on_ignored_order_or_limit`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated arguments from `#verify!`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated argument `name` from `#indexes`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated method `ActiveRecord::Migrator.schema_migrations_table_name`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated method `supports_primary_key?`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated method `supports_migrations?`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated methods `initialize_schema_migrations_table` and `initialize_internal_metadata_table`.
+
+    *Rafael Mendonça França*
+
+*   Raises when calling `lock!` in a dirty record.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated support to passing a class to `:class_name` on associations.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated argument `default` from `index_name_exists?`.
+
+    *Rafael Mendonça França*
+
+*   Remove deprecated support to `quoted_id` when typecasting an Active Record object.
+
+    *Rafael Mendonça França*
+
+*   Fix `bin/rails db:setup` and `bin/rails db:test:prepare` create  wrong
+    ar_internal_metadata's data for a test database.
+
+    Before:
+    ```
+    $ RAILS_ENV=test rails dbconsole
+    > SELECT * FROM ar_internal_metadata;
+    key|value|created_at|updated_at
+    environment|development|2017-09-11 23:14:10.815679|2017-09-11 23:14:10.815679
+    ```
+
+    After:
+    ```
+    $ RAILS_ENV=test rails dbconsole
+    > SELECT * FROM ar_internal_metadata;
+    key|value|created_at|updated_at
+    environment|test|2017-09-11 23:14:10.815679|2017-09-11 23:14:10.815679
+    ```
+
+    Fixes #26731.
+
+    *bogdanvlviv*
+
+*   Fix longer sequence name detection for serial columns.
+
+    Fixes #28332.
+
+    *Ryuta Kamizono*
+
+*   MySQL: Don't lose `auto_increment: true` in the `db/schema.rb`.
+
+    Fixes #30894.
+
+    *Ryuta Kamizono*
+
+*   Fix `COUNT(DISTINCT ...)` for `GROUP BY` with `ORDER BY` and `LIMIT`.
+
+    Fixes #30886.
+
+    *Ryuta Kamizono*
+
+*   PostgreSQL `tsrange` now preserves subsecond precision.
+
+    PostgreSQL 9.1+ introduced range types, and Rails added support for using
+    this datatype in Active Record. However, the serialization of
+    `PostgreSQL::OID::Range` was incomplete, because it did not properly
+    cast the bounds that make up the range. This led to subseconds being
+    dropped in SQL commands:
+
+    Before:
+
+        connection.type_cast(tsrange.serialize(range_value))
+        # => "[2010-01-01 13:30:00 UTC,2011-02-02 19:30:00 UTC)"
+
+    Now:
+
+        connection.type_cast(tsrange.serialize(range_value))
+        # => "[2010-01-01 13:30:00.670277,2011-02-02 19:30:00.745125)"
+
+    *Thomas Cannon*
+
+*   Passing a `Set` to `Relation#where` now behaves the same as passing an
+    array.
+
+    *Sean Griffin*
+
+*   Use given algorithm while removing index from database.
+
+    Fixes #24190.
+
+    *Mehmet Emin İNAÇ*
+
+*   Update payload names for `sql.active_record` instrumentation to be
+    more descriptive.
+
+    Fixes #30586.
+
+    *Jeremy Green*
+
 *   Add new error class `TransactionTimeout` for MySQL adapter which will be raised
     when lock wait time expires.
 
@@ -208,10 +354,6 @@
 *   Deprecate `supports_statement_cache?`.
 
     *Ryuta Kamizono*
-
-*   Quote database name in `db:create` grant statement (when database user does not have access to create the database).
-
-    *Rune Philosof*
 
 *   Raise error `UnknownMigrationVersionError` on the movement of migrations
     when the current migration does not exist.

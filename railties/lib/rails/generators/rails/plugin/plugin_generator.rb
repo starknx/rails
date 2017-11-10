@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-require "active_support/core_ext/hash/slice"
-require_relative "../app/app_generator"
+require "rails/generators/rails/app/app_generator"
 require "date"
 
 module Rails
@@ -88,12 +87,12 @@ task default: :test
     end
 
     PASSTHROUGH_OPTIONS = [
-      :skip_active_record, :skip_action_mailer, :skip_javascript, :skip_action_cable, :skip_sprockets, :database,
+      :skip_active_record, :skip_active_storage, :skip_action_mailer, :skip_javascript, :skip_action_cable, :skip_sprockets, :database,
       :javascript, :skip_yarn, :api, :quiet, :pretend, :skip
     ]
 
     def generate_test_dummy(force = false)
-      opts = (options || {}).slice(*PASSTHROUGH_OPTIONS)
+      opts = (options.dup || {}).keep_if { |k, _| PASSTHROUGH_OPTIONS.map(&:to_s).include?(k) }
       opts[:force] = force
       opts[:skip_bundle] = true
       opts[:skip_listen] = true

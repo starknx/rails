@@ -15,7 +15,7 @@ class ActiveStorage::AttachmentsTest < ActiveSupport::TestCase
     assert_equal "funky.jpg", @user.avatar.filename.to_s
   end
 
-  test "attach existing sgid blob" do
+  test "attach existing blob from a signed ID" do
     @user.avatar.attach create_blob(filename: "funky.jpg").signed_id
     assert_equal "funky.jpg", @user.avatar.filename.to_s
   end
@@ -63,6 +63,31 @@ class ActiveStorage::AttachmentsTest < ActiveSupport::TestCase
     assert_equal "funky.jpg", @user.avatar_attachment.blob.filename.to_s
   end
 
+  test "analyze newly-attached blob" do
+    perform_enqueued_jobs do
+      @user.avatar.attach create_file_blob
+    end
+
+    assert_equal 4104, @user.avatar.reload.metadata[:width]
+    assert_equal 2736, @user.avatar.metadata[:height]
+  end
+
+  test "analyze attached blob only once" do
+    blob = create_file_blob
+
+    perform_enqueued_jobs do
+      @user.avatar.attach blob
+    end
+
+    assert blob.reload.analyzed?
+
+    @user.avatar.attachment.destroy
+
+    assert_no_enqueued_jobs do
+      @user.reload.avatar.attach blob
+    end
+  end
+
   test "purge attached blob" do
     @user.avatar.attach create_blob(filename: "funky.jpg")
     avatar_key = @user.avatar.key
@@ -82,6 +107,19 @@ class ActiveStorage::AttachmentsTest < ActiveSupport::TestCase
       assert_nil ActiveStorage::Blob.find_by(key: avatar_key)
       assert_not ActiveStorage::Blob.service.exist?(avatar_key)
     end
+  end
+
+  test "find with attached blob" do
+    records = %w[alice bob].map do |name|
+      User.create!(name: name).tap do |user|
+        user.avatar.attach create_blob(filename: "#{name}.jpg")
+      end
+    end
+
+    users = User.where(id: records.map(&:id)).with_attached_avatar.all
+
+    assert_equal "alice.jpg", users.first.avatar.filename.to_s
+    assert_equal "bob.jpg", users.second.avatar.filename.to_s
   end
 
 
@@ -122,6 +160,38 @@ class ActiveStorage::AttachmentsTest < ActiveSupport::TestCase
     assert_equal "town.jpg", @user.highlights_attachments.first.blob.filename.to_s
   end
 
+  test "analyze newly-attached blobs" do
+    perform_enqueued_jobs do
+      @user.highlights.attach(
+        create_file_blob(filename: "racecar.jpg", content_type: "image/jpeg"),
+        create_file_blob(filename: "video.mp4", content_type: "video/mp4"))
+    end
+
+    assert_equal 4104, @user.highlights.first.metadata[:width]
+    assert_equal 2736, @user.highlights.first.metadata[:height]
+
+    assert_equal 640, @user.highlights.second.metadata[:width]
+    assert_equal 480, @user.highlights.second.metadata[:height]
+  end
+
+  test "analyze attached blobs only once" do
+    blobs = [
+      create_file_blob(filename: "racecar.jpg", content_type: "image/jpeg"),
+      create_file_blob(filename: "video.mp4", content_type: "video/mp4")
+    ]
+
+    perform_enqueued_jobs do
+      @user.highlights.attach(blobs)
+    end
+
+    assert blobs.each(&:reload).all?(&:analyzed?)
+
+    @user.highlights.attachments.destroy_all
+
+    assert_no_enqueued_jobs do
+      @user.highlights.attach(blobs)
+    end
+  end
 
   test "purge attached blobs" do
     @user.highlights.attach create_blob(filename: "funky.jpg"), create_blob(filename: "wonky.jpg")
